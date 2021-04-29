@@ -1,0 +1,101 @@
+#Setting global options 
+``` {r set_options}
+    
+    knitr::opts_chunk$set(warning = FALSE)
+```
+
+#Loading and preprocessing
+```{r}
+    
+
+
+    activity<-read.csv("C:\\Users\\pmunj\\Desktop\\R codes\\activity.csv")
+
+    activity$date <- as.POSIXct(activity$date, "%Y-%m-%d")
+    weekday <- weekdays(activity$date)
+    activity <- cbind(activity,weekday)
+
+    summary(activity)
+```    
+
+# 1. Mean number of total steps taken per day
+```{r}
+    total_steps <- with(activity, aggregate(steps, by = list(date), FUN = sum, na.rm = TRUE))
+names(total_steps) <- c("date", "steps")
+hist(total_steps$steps, main = "Total number of steps taken per day", xlab = "Total steps taken per day", col = "red", ylim = c(0,20), breaks = seq(0,25000, by=2500))
+```
+
+mean total number of steps taken per day:
+```{r}
+    mean(total_steps$steps)
+```
+median of the total number of steps taken
+```{r}
+median(total_steps$steps)
+```
+#2. Average daily activity pattern 
+```{r}
+    avg_daily_activity <- aggregate(activity$steps,     by=list(activity$interval), FUN=mean, na.rm=TRUE)
+    names(avg_daily_activity) <- c("interval", "mean")
+    plot(avg_daily_activity$interval, avg_daily_activity$mean, type = "l", col="darkblue", lwd = 2, xlab="Interval", ylab="Average number of steps", main="Average number of steps per intervals")
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+    avg_daily_activity[which.max(avg_daily_activity$mean),]$interval
+```
+#3. Filling missing values
+```{r}
+    sum(is.na(activity$steps))
+```
+```{r}
+   missing <- avg_daily_activity$mean[match(activity$interval, avg_daily_activity$interval)]
+```
+
+```{r}
+    activity_imputed <- transform(activity, steps = ifelse(is.na(activity$steps), yes = missing, no = activity$steps))
+total_steps_imputed <- aggregate(steps ~ date, activity_imputed, sum)
+names(total_steps_imputed) <- c("date", "daily_steps")
+```
+
+plotting the histogram
+
+```{r}
+    hist(total_steps_imputed$daily_steps, col = "IndianRed", xlab = "Total steps per day", ylim = c(0,30), main = "Total number of steps taken each day", breaks = seq(0,25000,by=2500))
+```
+
+mean of total number of steps taken per day
+```{r}
+    mean(total_steps_imputed$daily_steps)
+```
+median of total steps taken per day
+```{r}
+    median(total_steps_imputed$daily_steps)
+```
+#4. finding differences in acticity patterns between weekdays and weekends 
+
+```{r}
+    activity$date <- as.Date(strptime(activity$date, format="%Y-%m-%d"))
+activity$datetype <- sapply(activity$date, function(x) {
+        if (weekdays(x) == "Sábado" | weekdays(x) =="Domingo") 
+                {y <- "Weekend"} else 
+                {y <- "Weekday"}
+                y
+        })
+```
+time series plot of the 5 minute interval and average number of steps taken
+```{r}
+    library(ggplot2)
+    activity_by_date <- aggregate(steps~interval + datetype, activity, mean, na.rm = TRUE)
+plot<- ggplot(activity_by_date, aes(x = interval , y = steps, color = datetype)) +
+       geom_line() +
+       labs(title = "Average daily steps by type of date", x = "Interval", y = "Average number of steps") +
+       facet_wrap(~datetype, ncol = 1, nrow=2)
+print(plot)
+```
+
+
+
+
+
+
